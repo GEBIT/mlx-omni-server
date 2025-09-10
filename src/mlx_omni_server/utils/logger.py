@@ -65,5 +65,10 @@ def get_logger(name: Optional[str] = None) -> logging.Logger:
     return log
 
 
+def set_logger_level(logger: logging.Logger, level: str):
+    log_level = logging.getLevelNamesMapping().get(level.upper())
+    logger.setLevel(log_level)
+
+
 # Default logger
 logger = get_logger()

@@ -4,8 +4,11 @@ import os
 import uvicorn
 from fastapi import FastAPI
 
+from mlx_omni_server.utils.logger import set_logger_level
+
 from .middleware.logging import RequestResponseLoggingMiddleware
 from .routers import api_router
+from .utils.logger import logger, set_logger_level
 
 app = FastAPI(title="MLX Omni Server")
 
@@ -14,6 +17,8 @@ app.add_middleware(
     RequestResponseLoggingMiddleware,
     # exclude_paths=["/health"]
 )
+
+from fastapi.middleware.cors import CORSMiddleware
 
 app.include_router(api_router)
 
@@ -46,16 +51,38 @@ def build_parser():
         choices=["debug", "info", "warning", "error", "critical"],
         help="Set the logging level, defaults to info",
     )
+
+    parser.add_argument(
+        "--cors-allow-origins",
+        type=str,
+        default=None,
+        help="Apply origins to CORSMiddleware. This is useful for accessing the local server directly from the browser (use --cors-allow-origins=\"*\"). Defaults to disabled",
+    )
     return parser
+
+
+parser = build_parser()
+args = parser.parse_args()
+
+if args.cors_allow_origins:
+    origins = [origin.strip() for origin in args.cors_allow_origins.split(",")]
+
+    # Allow all origins for local use or specific origin
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# Set log level through environment variable
+os.environ["MLX_OMNI_LOG_LEVEL"] = args.log_level
+set_logger_level(logger, args.log_level)
 
 
 def start():
     """Start the MLX Omni Server."""
-    parser = build_parser()
-    args = parser.parse_args()
-
-    # Set log level through environment variable
-    os.environ["MLX_OMNI_LOG_LEVEL"] = args.log_level
 
     # Start server with uvicorn
     uvicorn.run(
@@ -66,3 +93,7 @@ def start():
         use_colors=True,
         workers=args.workers,
     )
+
+
+if __name__ == "__main__":
+    start()
