@@ -484,7 +484,7 @@ class ChatGenerator:
                     )
                 else:
                     content = StreamContent(
-                        text_delta=parse_result.content or response.text,
+                        text_delta=parse_result.content,
                         token=response.token,
                         chunk_index=chunk_index,
                     )

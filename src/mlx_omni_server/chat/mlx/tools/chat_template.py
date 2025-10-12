@@ -9,23 +9,34 @@ from .hugging_face import HuggingFaceToolParser
 from .llama3 import Llama3ToolParser
 from .mistral import MistralToolsParser
 from .qwen3_moe_tools_parser import Qwen3MoeToolParser
-from .thinking_decoder import ThinkingDecoder
+from .thinking_decoder import (
+    ThinkingDecoder,
+    DefaultThinkingDecoder,
+    GptOssThinkingDecoder,
+)
+from ....utils.logger import logger
 
 # Constants
 THINK_TAG = "<think>"
 
 
-def load_tools_parser(tools_parser_type: str) -> BaseToolParser:
-    if tools_parser_type == "llama":
+def load_tools_parser(model_type: str) -> BaseToolParser:
+    if model_type == "llama":
         return Llama3ToolParser()
-    if tools_parser_type == "mistral":
+    if model_type == "mistral":
         return MistralToolsParser()
-    if tools_parser_type == "qwen2" or tools_parser_type == "qwen3":
+    if model_type == "qwen2" or model_type == "qwen3":
         return HuggingFaceToolParser()
-    if tools_parser_type == "qwen3_moe":
+    if model_type == "qwen3_moe":
         return Qwen3MoeToolParser()
     else:
         return HuggingFaceToolParser()
+
+
+def load_thinking_decoder(model_type: str) -> ThinkingDecoder:
+    if model_type == "gpt_oss":
+        return GptOssThinkingDecoder()
+    return DefaultThinkingDecoder(init_buffer=THINK_TAG)
 
 
 class ChatTemplate(ABC):
@@ -34,18 +45,18 @@ class ChatTemplate(ABC):
     start_tool_calls: str
     end_tool_calls: str
 
-    def __init__(self, tools_parser_type: str, tokenizer: TokenizerWrapper):
+    def __init__(self, model_type: str, tokenizer: TokenizerWrapper):
         self.tokenizer = tokenizer
         self.has_tools = False
         self.reason_decoder = None
         self.enable_thinking_parse: Optional[bool] = None
-        self.tools_parser: Optional[BaseToolParser] = load_tools_parser(
-            tools_parser_type
-        )
+        self.model_type = model_type
+        self.tools_parser: Optional[BaseToolParser] = load_tools_parser(model_type)
 
         # Initialize tool call markers with default values
         self.start_tool_calls = self.tools_parser.start_tool_calls
         self.end_tool_calls = self.tools_parser.end_tool_calls
+        logger.info("Model type: %s", model_type)
 
     def apply_chat_template(
         self,
@@ -146,23 +157,26 @@ class ChatTemplate(ABC):
 
         # Auto-detect thinking if not explicitly set
         if enable_thinking_parse is None:
-            if self._detect_thinking_from_prompt(prompt):
+            if self.model_type == "gpt_oss" or self._detect_thinking_from_prompt(
+                prompt
+            ):
                 self.enable_thinking_parse = True
                 enable_thinking_parse = True
             # If no <think> detected, remain None (no modification)
 
         if enable_thinking_parse is True:
-            if skip_thinking_prefill:
+            if self.model_type == "gpt_oss":
+                pass  # No prompt modification needed for gpt_oss
+            elif skip_thinking_prefill:
                 # With json_schema: ensure prompt doesn't end with <think>
                 if stripped_prompt.endswith(THINK_TAG):
                     prompt = stripped_prompt[: -len(THINK_TAG)]
                 # Let OutlinesLogitsProcessor handle thinking pattern
-                self.reason_decoder = ThinkingDecoder(init_buffer=THINK_TAG)
             else:
                 # Without json_schema: ensure prompt ends with <think>
                 if not stripped_prompt.endswith(THINK_TAG):
                     prompt = prompt + THINK_TAG
-                self.reason_decoder = ThinkingDecoder(init_buffer=THINK_TAG)
+            self.reason_decoder = load_thinking_decoder(self.model_type)
 
         elif enable_thinking_parse is False:
             # No modification to prompt
@@ -178,8 +192,9 @@ class ChatTemplate(ABC):
 
         if self.reason_decoder is not None:
             result = self.reason_decoder.stream_decode(text)
-            delta_content = result.get("delta_content") or ""
-            delta_thinking = result.get("delta_thinking")
+            if result is not None:
+                delta_content = result.get("delta_content") or ""
+                delta_thinking = result.get("delta_thinking")
 
         # TODO: support stream parse tools
         return ChatTemplateResult(
@@ -194,10 +209,11 @@ class ChatTemplate(ABC):
 
         if self.reason_decoder is not None:
             result = self.reason_decoder.decode(text)
-            content = result.get("content")
-            thinking = result.get("thinking")
+            if result is not None:
+                content = result.get("content")
+                thinking = result.get("thinking")
 
-        if self.has_tools:
+        if self.has_tools and self.tools_parser is not None:
             tool_calls = self.tools_parser.parse_tools(content)
 
             # If tool calls were found, clear content to avoid duplication
