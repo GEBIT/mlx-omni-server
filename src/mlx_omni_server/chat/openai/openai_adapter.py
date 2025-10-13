@@ -209,7 +209,7 @@ class OpenAIAdapter:
                         ChatCompletionChunkChoice(
                             index=0,
                             delta=message,
-                            finish_reason=chunk.finish_reason or "stop",
+                            finish_reason=chunk.finish_reason,
                             logprobs=chunk.logprobs,
                         )
                     ],
