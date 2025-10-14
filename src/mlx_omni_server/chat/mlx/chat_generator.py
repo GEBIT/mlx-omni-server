@@ -491,7 +491,7 @@ class ChatGenerator:
                         token=response.token,
                         chunk_index=chunk_index,
                     )
-                logger.debug("Streaming %s", content)
+                # For debugging: print(parse_result.content.upper() + parse_result.thinking.lower(), end="", flush=True)
 
                 stats = GenerationStats(
                     prompt_tokens=response.prompt_tokens,

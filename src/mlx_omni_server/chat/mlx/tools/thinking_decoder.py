@@ -118,7 +118,7 @@ class GptOssThinkingDecoder(ThinkingDecoder):
     """Thinking decoder for GPT-OSS model with custom tags."""
 
     def __init__(self):
-        self.last_tag: str = "<|start|>"
+        self.last_tag: str = "start"
         self.role: str = "assistant"
         self.channel: str = ""
         logger.info("Initialized GptOssThinkingDecoder")
@@ -127,53 +127,39 @@ class GptOssThinkingDecoder(ThinkingDecoder):
         delta_content = ""
         delta_thinking = ""
         while len(text) > 0:
-            if self.last_tag == "<|start|>":
-                channel_idx = text.find("<|channel|>")
-                if channel_idx >= 0:
-                    self.role += text[:channel_idx]
-                    self.last_tag = "<|channel|>"
+            # Search for the next tag
+            tag_regex = r"([\s\S]*?)<\|(\w+)\|>([\s\S]*)"
+            pre_text, tag, post_text = text, None, ""
+            tag_match = re.match(tag_regex, text)
+            if tag_match is not None:
+                pre_text = tag_match.group(1).strip()
+                tag = tag_match.group(2).strip()
+                post_text = tag_match.group(3).strip()
+                print(f"[{pre_text},{tag},{post_text}]")
+
+            # Update channel and role states, add text to content or thinking
+            if self.last_tag == "channel":
+                self.channel += pre_text
+                if tag is not None:
+                    self.channel = self.channel.strip()
+            elif self.last_tag == "start":
+                self.role += pre_text
+                if tag is not None:
+                    self.role = self.role.strip()
+            elif self.last_tag == "message":
+                if self.channel == "final":
+                    delta_content += pre_text
+                else:
+                    delta_thinking += pre_text
+
+            # Update tag and text
+            if tag is not None:
+                self.last_tag = tag
+                if tag == "channel":
                     self.channel = ""
-                    text = text[channel_idx + len("<|channel|>") :]
-                else:
-                    self.role += text
-                    text = ""
-            elif self.last_tag == "<|channel|>":
-                message_idx = text.find("<|message|>", 0)
-                if message_idx >= 0:
-                    self.channel += text[:message_idx]
-                    self.last_tag = "<|message|>"
-                    text = text[message_idx + len("<|message|>") :]
-                else:
-                    self.channel += text
-                    text = ""
-            elif self.last_tag == "<|message|>":
-                end_idx = text.find("<|end|>", 0)
-                delta_text = ""
-                if end_idx >= 0:
-                    delta_text = text[:end_idx]
-                    self.last_tag = "<|end|>"
-                    text = text[end_idx + len("<|end|>") :]
-                else:
-                    delta_text = text
-                    text = ""
-                if self.channel == "analysis":
-                    delta_thinking += delta_text
-                else:
-                    delta_content += delta_text
-            elif self.last_tag == "<|end|>":
-                start_idx = text.find("<|start|>", 0)
-                if start_idx >= 0:
-                    if start_idx > 0:
-                        print(
-                            f"WARN: Unexpected text between <|end|> and <|start|>: {text[:start_idx]}"
-                        )
-                    self.last_tag = "<|start|>"
-                    text = text[start_idx + len("<|start|>") :]
-                else:
-                    print(
-                        f"WARN: Unexpected text after <|end|> before <|start|>: {text}"
-                    )
-                    text = ""
+                elif tag == "start":
+                    self.role = ""
+            text = post_text
 
         return {
             "delta_content": delta_content,
