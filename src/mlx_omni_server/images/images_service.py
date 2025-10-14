@@ -11,7 +11,7 @@ from mflux.callbacks.instances.memory_saver import MemorySaver
 from mflux.config.config import Config
 from mflux.config.model_config import ModelConfig
 from mflux.error.exceptions import StopImageGenerationException
-from mflux.flux.flux import Flux1
+from mflux.models.flux.variants.txt2img.flux import Flux1
 from PIL import Image
 
 from ..utils.logger import logger
@@ -110,7 +110,7 @@ class MFluxImageGenerator:
         low_memory_mode = all_extra_params.get("low_arm", True)
         memory_saver = None
         if low_memory_mode:
-            memory_saver = MemorySaver(flux=flux, keep_transformer=seed > 1)
+            memory_saver = MemorySaver(model=flux, keep_transformer=seed > 1)
             CallbackRegistry.register_before_loop(memory_saver)
             CallbackRegistry.register_in_loop(memory_saver)
             CallbackRegistry.register_after_loop(memory_saver)
