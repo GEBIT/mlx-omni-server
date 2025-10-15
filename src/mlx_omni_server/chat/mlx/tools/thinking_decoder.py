@@ -135,7 +135,7 @@ class GptOssThinkingDecoder(ThinkingDecoder):
                 pre_text = tag_match.group(1).strip()
                 tag = tag_match.group(2).strip()
                 post_text = tag_match.group(3).strip()
-                print(f"[{pre_text},{tag},{post_text}]")
+                # print(f"[{pre_text},{tag},{post_text}]")
 
             # Update channel and role states, add text to content or thinking
             if self.last_tag == "channel":

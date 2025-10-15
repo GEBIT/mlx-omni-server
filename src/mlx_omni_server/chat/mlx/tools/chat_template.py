@@ -176,13 +176,13 @@ class ChatTemplate(ABC):
                 # Without json_schema: ensure prompt ends with <think>
                 if not stripped_prompt.endswith(THINK_TAG):
                     prompt = prompt + THINK_TAG
-            self.reason_decoder = load_thinking_decoder(self.model_type)
 
         elif enable_thinking_parse is False:
             # No modification to prompt
             self.reason_decoder = None
 
-        # enable_thinking_parse is None: no modification, no decoder setup
+        # We basically always want a reason decoder as most reasoning models reason by default
+        self.reason_decoder = load_thinking_decoder(self.model_type)
 
         return prompt
 

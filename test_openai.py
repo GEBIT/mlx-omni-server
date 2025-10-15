@@ -10,7 +10,8 @@ MODEL_MAPPING = {
     "gemma3:4b": "mlx-community/gemma-3-text-4b-it-4bit",
     "gemma3:1b": "mlx-community/gemma-3-4b-it-4bit-DWQ",
     "qwen2.5-coder:32b": "mlx-community/Qwen2.5-Coder-32B-Instruct-4bit",
-    "deepseek-r1:70b": "mlx-community/DeepSeek-R1-Distill-Llama-70B-4bit"
+    "deepseek-r1:70b": "mlx-community/DeepSeek-R1-Distill-Llama-70B-4bit",
+    "qwen3:30b": "Qwen/Qwen3-30B-A3B-MLX-4bit"
 }
 
 def get_model_id(model_alias):
