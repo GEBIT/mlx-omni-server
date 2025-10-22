@@ -316,6 +316,8 @@ class ChatGenerator:
             # Generate complete response by collecting stream.
             # stream_generate handles the preparation of configurations.
             complete_raw_text = ""
+            complete_thinking = ""
+            complete_content = ""
             final_stream_result = None
             all_text_tokens = []
             all_reasoning_tokens = []
@@ -331,20 +333,21 @@ class ChatGenerator:
                 **kwargs,
             ):
                 # Collect deltas to reconstruct complete content
-                if stream_result.content.text_delta:
-                    complete_raw_text += stream_result.content.text_delta
-                    all_text_tokens.append(stream_result.content.token)
-                elif stream_result.content.reasoning_delta:
-                    # Reasoning tokens should also be included in complete_raw_text
+                if stream_result.content.reasoning_delta:
+                    complete_thinking += stream_result.content.reasoning_delta
                     complete_raw_text += stream_result.content.reasoning_delta
                     all_reasoning_tokens.append(stream_result.content.token)
+                if stream_result.content.text_delta:
+                    complete_content += stream_result.content.text_delta
+                    complete_raw_text += stream_result.content.text_delta
+                    all_text_tokens.append(stream_result.content.token)
 
                 final_stream_result = stream_result
 
             if final_stream_result is None:
                 raise RuntimeError("No tokens generated")
 
-            logger.info(f"Model Response:\n{complete_raw_text}")
+            logger.info(f"Model Response:\nThinking: {complete_thinking}\nContent: {complete_content}")
             chat_result = self.chat_template.parse_chat_response(complete_raw_text)
 
             # Determine appropriate finish_reason
@@ -354,8 +357,8 @@ class ChatGenerator:
 
             # Create CompletionContent with complete data
             content = CompletionContent(
-                text=chat_result.content,
-                reasoning=chat_result.thinking,
+                text=complete_content,
+                reasoning=complete_thinking,
                 tool_calls=chat_result.tool_calls,
                 text_tokens=all_text_tokens,
                 reasoning_tokens=all_reasoning_tokens if all_reasoning_tokens else None,
@@ -484,10 +487,11 @@ class ChatGenerator:
                     )
                 else:
                     content = StreamContent(
-                        text_delta=parse_result.content or response.text,
+                        text_delta=parse_result.content,
                         token=response.token,
                         chunk_index=chunk_index,
                     )
+                # For debugging: print(parse_result.content.upper() + parse_result.thinking.lower(), end="", flush=True)
 
                 stats = GenerationStats(
                     prompt_tokens=response.prompt_tokens,

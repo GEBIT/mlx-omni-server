@@ -1,15 +1,37 @@
 import re
 from typing import Any, Dict, Optional
+from abc import ABC, abstractmethod
+from ....utils.logger import logger
 
 
-class ThinkingDecoder:
+class ThinkingDecoder(ABC):
     """Base class for thinking decoders."""
+
+    @abstractmethod
+    def _parse_stream_response(self, text: str) -> Optional[Dict[str, Optional[str]]]:
+        pass
+
+    @abstractmethod
+    def _parse_response(self, response: str) -> Optional[Dict[str, Optional[str]]]:
+        pass
+
+    def stream_decode(self, text: str) -> Optional[Dict[str, Optional[str]]]:
+        """Parse tool calls from model output."""
+        return self._parse_stream_response(text)
+
+    def decode(self, text: str) -> Optional[Dict[str, Optional[str]]]:
+        """Parse thinking content from model output"""
+        return self._parse_response(text)
+
+
+class DefaultThinkingDecoder(ThinkingDecoder):
+    """Default implementation of the thinking decoder."""
 
     def __init__(self, thinking_tag: str = "think", init_buffer: str = ""):
         self.thinking_tag = thinking_tag
         self.accumulated_text = init_buffer
 
-    def _parse_stream_response(self, text: str) -> Optional[Dict[str, Any]]:
+    def _parse_stream_response(self, text: str) -> Optional[Dict[str, Optional[str]]]:
         # Check if in thinking mode
         thinking_end_tag = f"</{self.thinking_tag}>"
         thinking_start_tag = f"<{self.thinking_tag}>"
@@ -51,10 +73,6 @@ class ThinkingDecoder:
             # Other cases, possibly thinking mode not enabled or other situations
             return {"delta_content": text, "delta_thinking": None}
 
-    def stream_decode(self, text: str) -> Optional[Dict[str, Any]]:
-        """Parse tool calls from model output."""
-        return self._parse_stream_response(text)
-
     def _parse_response(self, response: str):
         tag = self.thinking_tag
         # First check for complete thinking tag pattern
@@ -95,6 +113,64 @@ class ThinkingDecoder:
                 "thinking": None,
             }
 
-    def decode(self, text: str) -> Optional[Dict[str, Any]]:
-        """Parse thinking content from model output"""
-        return self._parse_response(text)
+
+class GptOssThinkingDecoder(ThinkingDecoder):
+    """Thinking decoder for GPT-OSS model with custom tags."""
+
+    def __init__(self):
+        self.last_tag: str = "start"
+        self.role: str = "assistant"
+        self.channel: str = ""
+        logger.info("Initialized GptOssThinkingDecoder")
+
+    def _parse_stream_response(self, text: str) -> Optional[Dict[str, Optional[str]]]:
+        delta_content = ""
+        delta_thinking = ""
+        while len(text) > 0:
+            # Search for the next tag
+            tag_regex = r"([\s\S]*?)<\|(\w+)\|>([\s\S]*)"
+            pre_text, tag, post_text = text, None, ""
+            tag_match = re.match(tag_regex, text)
+            if tag_match is not None:
+                pre_text = tag_match.group(1).strip()
+                tag = tag_match.group(2).strip()
+                post_text = tag_match.group(3).strip()
+                # print(f"[{pre_text},{tag},{post_text}]")
+
+            # Update channel and role states, add text to content or thinking
+            if self.last_tag == "channel":
+                self.channel += pre_text
+                if tag is not None:
+                    self.channel = self.channel.strip()
+            elif self.last_tag == "start":
+                self.role += pre_text
+                if tag is not None:
+                    self.role = self.role.strip()
+            elif self.last_tag == "message":
+                if self.channel == "final":
+                    delta_content += pre_text
+                else:
+                    delta_thinking += pre_text
+
+            # Update tag and text
+            if tag is not None:
+                self.last_tag = tag
+                if tag == "channel":
+                    self.channel = ""
+                elif tag == "start":
+                    self.role = ""
+            text = post_text
+
+        return {
+            "delta_content": delta_content,
+            "delta_thinking": delta_thinking,
+        }
+
+    def _parse_response(self, response: str) -> Optional[Dict[str, Optional[str]]]:
+        result = self._parse_stream_response(response)
+        if result is None:
+            return None
+        return {
+            "content": result.get("delta_content"),
+            "thinking": result.get("delta_thinking"),
+        }

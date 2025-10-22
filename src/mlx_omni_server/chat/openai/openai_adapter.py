@@ -195,16 +195,11 @@ class OpenAIAdapter:
             for chunk in self._generate_wrapper.generate_stream(**params):
                 created = int(time.time())
 
-                # TODO: support streaming tools parse
-                # For streaming, we need to get the appropriate delta content
-                if chunk.content.text_delta:
-                    content = chunk.content.text_delta
-                elif chunk.content.reasoning_delta:
-                    content = chunk.content.reasoning_delta
-                else:
-                    content = ""
-
-                message = ChatMessage(role=Role.ASSISTANT, content=content)
+                message = ChatMessage(
+                    role=Role.ASSISTANT,
+                    content=chunk.content.text_delta or "",
+                    reasoning=chunk.content.reasoning_delta or "",
+                )
 
                 yield ChatCompletionChunk(
                     id=chat_id,
@@ -214,7 +209,7 @@ class OpenAIAdapter:
                         ChatCompletionChunkChoice(
                             index=0,
                             delta=message,
-                            finish_reason=chunk.finish_reason or "stop",
+                            finish_reason=chunk.finish_reason,
                             logprobs=chunk.logprobs,
                         )
                     ],
