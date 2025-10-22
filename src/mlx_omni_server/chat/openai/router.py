@@ -10,6 +10,7 @@ from mlx_omni_server.chat.openai.schema import (
     ChatCompletionRequest,
     ChatCompletionResponse,
 )
+from mlx_omni_server.utils.gebit import check_model_allowed
 
 router = APIRouter(tags=["chat—completions"])
 
@@ -18,6 +19,7 @@ router = APIRouter(tags=["chat—completions"])
 @router.post("/v1/chat/completions", response_model=ChatCompletionResponse)
 async def create_chat_completion(request: ChatCompletionRequest):
     """Create a chat completion"""
+    check_model_allowed(request.model)
 
     text_model = _create_text_model(
         request.model,
