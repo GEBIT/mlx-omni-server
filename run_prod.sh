@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# --- Configuration ---
+# Define the commands to run. We use 'sleep' as a placeholder for long-running tasks.
+# Replace these with the actual commands you want to run.
+# CMD1="uv run gunicorn mlx_omni_server.main:app --bind 0.0.0.0:10240 --worker-class uvicorn.workers.UvicornWorker --workers 2 --log-level info --env ALLOWED_MODEL=mlx-community/multilingual-e5-large"
+# CMD2="uv run gunicorn mlx_omni_server.main:app --bind 0.0.0.0:10241 --worker-class uvicorn.workers.UvicornWorker --workers 1 --log-level info --env ALLOWED_MODEL=mlx-community/gpt-oss-120b-MXFP4-Q4"
+# CMD3="uv run gunicorn mlx_omni_server.main:app --bind 0.0.0.0:10242 --worker-class uvicorn.workers.UvicornWorker --workers 1 --log-level info --env ALLOWED_MODEL=Qwen/Qwen3-30B-A3B-MLX-4bit"
+
+MODEL1="mlx-community/multilingual-e5-large"
+CMD1="uv run uvicorn mlx_omni_server.main:app --reload --host 0.0.0.0 --port 10240 --workers 2"
+MODEL2="mlx-community/gpt-oss-120b-MXFP4-Q4"
+CMD2="uv run uvicorn mlx_omni_server.main:app --reload --host 0.0.0.0 --port 10241 --workers 1"
+MODEL3="Qwen/Qwen3-30B-A3B-MLX-4bit"
+CMD3="uv run uvicorn mlx_omni_server.main:app --reload --host 0.0.0.0 --port 10242 --workers 1"
+
+# Array to store the Process IDs (PIDs) of the background jobs
+PIDS=()
+
+# --- Signal Handler: Cleanup Function ---
+# This function is called when the script receives a SIGINT signal (Ctrl+C).
+cleanup() {
+  echo -e "\n\n[Runner] Caught Ctrl+C signal. Shutting down all parallel processes..."
+
+  # The 'kill' command sends a SIGTERM signal to all stored PIDs.
+  # '2>/dev/null' suppresses error messages if a process has already finished.
+  if [ ${#PIDS[@]} -gt 0 ]; then
+    kill "${PIDS[@]}" 2>/dev/null
+    echo "[Runner] Sent termination signal to PIDs: ${PIDS[*]}"
+  else
+    echo "[Runner] No active background processes to terminate."
+  fi
+
+  # Exit the script cleanly
+  exit 0
+}
+
+# Trap the SIGINT signal (triggered by Ctrl+C) and execute the cleanup function
+trap cleanup INT
+
+# --- Process Execution ---
+
+echo "[Runner] Starting processes in parallel..."
+
+# Process 1
+echo "[Process 1] Running: $CMD1"
+ALLOWED_MODEL="$MODEL1" $CMD1 &
+PIDS+=($!) # Add the PID of the last background command ($!) to the PIDS array
+
+# Process 2
+echo "[Process 2] Running: $CMD2"
+ALLOWED_MODEL="$MODEL2" $CMD2 &
+PIDS+=($!) # Add PID to array
+
+# Process 3
+echo "[Process 3] Running: $CMD3"
+ALLOWED_MODEL="$MODEL3" $CMD3 &
+PIDS+=($!) # Add PID to array
+
+echo "[Runner] Successfully started processes."
+echo "[Runner] Active PIDs: ${PIDS[*]}"
+echo "[Runner] ------------------------------------------------------------------"
+echo "[Runner] Monitoring. Press Ctrl+C at any time to kill all processes."
+echo "[Runner] ------------------------------------------------------------------"
+
+# 'wait' without arguments waits for all background jobs associated with the shell to finish.
+# This keeps the main script running until either all jobs complete naturally (after 60, 70, 80 seconds)
+# OR until the 'cleanup' function is triggered by Ctrl+C.
+wait
+
+echo "[Runner] All background processes finished naturally."
+
+# Remove the trap just before a successful exit
+trap - INT
