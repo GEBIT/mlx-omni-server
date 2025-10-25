@@ -3,7 +3,7 @@ name = "mlx-omni-server"
 version = "0.5.1"
 description = "MLX Omni Server is a server that provides OpenAI-compatible APIs using Apple's MLX framework."
 authors = [{ name = "madroid", email = "madroidmaq@gmail.com" }]
-requires-python = ">=3.11"
+requires-python = ">=3.11, <=3.13"
 readme = "README.md"
 license = "MIT"
 keywords = ["mlx", "ai", "agi", "aigc", "server", "openai", "tts", "stt"]
