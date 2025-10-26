@@ -8,11 +8,12 @@
 # CMD3="uv run gunicorn mlx_omni_server.main:app --bind 0.0.0.0:10242 --worker-class uvicorn.workers.UvicornWorker --workers 1 --log-level info --env ALLOWED_MODEL=Qwen/Qwen3-30B-A3B-MLX-4bit"
 
 MODEL1="mlx-community/multilingual-e5-large"
-CMD1="uv run uvicorn mlx_omni_server.main:app --host 0.0.0.0 --port 10240 --workers 2"
+CMD1="uv run uvicorn mlx_omni_server.main:app --host 0.0.0.0 --port 10240 --log-level warning --workers 2"
+# ALT: "./.venv/bin/python -m mlx_omni_server.main --host 0.0.0.0 --port 10240 --log-level warning --workers 2"
 MODEL2="mlx-community/gpt-oss-120b-MXFP4-Q4"
-CMD2="uv run uvicorn mlx_omni_server.main:app --host 0.0.0.0 --port 10241 --workers 1"
+CMD2="uv run uvicorn mlx_omni_server.main:app --host 0.0.0.0 --port 10241 --log-level warning --workers 1"
 MODEL3="Qwen/Qwen3-30B-A3B-MLX-4bit"
-CMD3="uv run uvicorn mlx_omni_server.main:app --host 0.0.0.0 --port 10242 --workers 1"
+CMD3="uv run uvicorn mlx_omni_server.main:app --host 0.0.0.0 --port 10242 --log-level warning --workers 1"
 
 # Array to store the Process IDs (PIDs) of the background jobs
 PIDS=()
@@ -69,17 +70,17 @@ echo "[Runner] Starting processes in parallel..."
 
 # Process 1
 echo "[Process 1] Running: $CMD1"
-ALLOWED_MODEL="$MODEL1" $CMD1 &
+ALLOWED_MODEL="$MODEL1" MLX_OMNI_LOG_LEVEL=warning $CMD1 &
 PIDS+=($!) # Add the PID of the last background command ($!) to the PIDS array
 
 # Process 2
 echo "[Process 2] Running: $CMD2"
-ALLOWED_MODEL="$MODEL2" $CMD2 &
+ALLOWED_MODEL="$MODEL2" MLX_OMNI_LOG_LEVEL=warning $CMD2 &
 PIDS+=($!) # Add PID to array
 
 # Process 3
 echo "[Process 3] Running: $CMD3"
-ALLOWED_MODEL="$MODEL3" $CMD3 &
+ALLOWED_MODEL="$MODEL3" MLX_OMNI_LOG_LEVEL=warning $CMD3 &
 PIDS+=($!) # Add PID to array
 
 echo "[Runner] Successfully started processes."
