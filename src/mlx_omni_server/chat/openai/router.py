@@ -1,4 +1,5 @@
 import json
+from time import time
 from typing import Generator, Optional
 
 from fastapi import APIRouter
@@ -11,6 +12,7 @@ from mlx_omni_server.chat.openai.schema import (
     ChatCompletionResponse,
 )
 from mlx_omni_server.utils.gebit import check_model_allowed
+from mlx_omni_server.utils.logger import logger
 
 router = APIRouter(tags=["chat—completions"])
 
@@ -21,6 +23,8 @@ async def create_chat_completion(request: ChatCompletionRequest):
     """Create a chat completion"""
     check_model_allowed(request.model)
 
+    logger.debug(f"Beginning completion request")
+    start_time = time()
     text_model = _create_text_model(
         request.model,
         request.get_extra_params().get("adapter_path"),
@@ -29,6 +33,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
 
     if not request.stream:
         completion = text_model.generate(request)
+        logger.debug(f"Completed completion request after {time() - start_time:.3f}s")
         return JSONResponse(content=completion.model_dump(exclude_none=True))
 
     async def event_generator() -> Generator[str, None, None]:
@@ -36,6 +41,8 @@ async def create_chat_completion(request: ChatCompletionRequest):
             yield f"data: {json.dumps(chunk.model_dump(exclude_none=True))}\n\n"
 
         yield "data: [DONE]\n\n"
+        logger.debug(f"Completed streamed completion request after {time() - start_time:.3f}s")
+
 
     return StreamingResponse(
         event_generator(),
