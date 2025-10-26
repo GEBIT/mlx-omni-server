@@ -9,6 +9,10 @@ from ..utils.logger import logger
 from .schema import EmbeddingData, EmbeddingRequest, EmbeddingResponse, EmbeddingUsage
 
 
+SUPPORT_BATCH_EMBEDDING = [
+    "mlx-community/multilingual-e5-large"
+]
+
 class EmbeddingsService:
     """Service for generating embeddings using MLX models (focused on BERT-like models)"""
 
@@ -135,27 +139,10 @@ class EmbeddingsService:
         # Count tokens for usage info
         token_count = self._count_tokens(inputs)
 
-        # Generate embeddings for all inputs
         embeddings = []
-        for idx, text in enumerate(inputs):
-            try:
-                # Generate embedding using the model
-                try:
-                    # First try the specific BERT extraction method
-                    embedding = self._get_bert_embeddings(
-                        model, processor, text, model_id
-                    )
-                except Exception as e:
-                    logger.debug(
-                        f"Failed with BERT method: {str(e)}. Trying general generate() function."
-                    )
-                    # Fall back to the generate function
-                    output = generate(model, processor, text)
-                    if hasattr(output, "last_hidden_state"):
-                        embedding = output.last_hidden_state[:, 0, :]
-                    else:
-                        embedding = output
-
+        if model_id in SUPPORT_BATCH_EMBEDDING:
+            output = generate(model, processor, texts=inputs)
+            for idx, embedding in enumerate(output.text_embeds):
                 # Convert to list of floats with proper formatting
                 embedding_list = self._ensure_float_list(embedding)
 
@@ -165,10 +152,40 @@ class EmbeddingsService:
                     index=idx,
                 )
                 embeddings.append(embedding_data)
+        else:
+            # Sequentially generate embeddings for all inputs
+            for idx, text in enumerate(inputs):
+                try:
+                    # Generate embedding using the model
+                    try:
+                        # First try the specific BERT extraction method
+                        embedding = self._get_bert_embeddings(
+                            model, processor, text, model_id
+                        )
+                    except Exception as e:
+                        logger.debug(
+                            f"Failed with BERT method: {str(e)}. Trying general generate() function."
+                        )
+                        # Fall back to the generate function
+                        output = generate(model, processor, text)
+                        if hasattr(output, "last_hidden_state"):
+                            embedding = output.last_hidden_state[:, 0, :]
+                        else:
+                            embedding = output
 
-            except Exception as e:
-                logger.error(f"Error generating embedding: {str(e)}", exc_info=True)
-                raise RuntimeError(f"Failed to generate embedding: {str(e)}")
+                    # Convert to list of floats with proper formatting
+                    embedding_list = self._ensure_float_list(embedding)
+
+                    # Create embedding data
+                    embedding_data = EmbeddingData(
+                        embedding=embedding_list,
+                        index=idx,
+                    )
+                    embeddings.append(embedding_data)
+
+                except Exception as e:
+                    logger.error(f"Error generating embedding: {str(e)}", exc_info=True)
+                    raise RuntimeError(f"Failed to generate embedding: {str(e)}")
 
         # Create the full response
         response = EmbeddingResponse(
