@@ -186,7 +186,8 @@ class ChatGenerator:
 
         # Map enable_thinking to enable_thinking_parse for new parameter name
         if "enable_thinking" in template_kwargs:
-            template_kwargs["enable_thinking_parse"] = template_kwargs.pop(
+            # FK: Replaced pop with get because pop obviously breaks enable_thinking
+            template_kwargs["enable_thinking_parse"] = template_kwargs.get(
                 "enable_thinking"
             )
 
