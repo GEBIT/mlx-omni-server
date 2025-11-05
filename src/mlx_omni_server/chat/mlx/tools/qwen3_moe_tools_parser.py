@@ -1,5 +1,6 @@
 import re
 import uuid
+import json
 from typing import List, Optional
 
 from ....utils.logger import logger
@@ -38,6 +39,8 @@ class Qwen3MoeToolParser(BaseToolParser):
 
             tool_calls = []
 
+            # 1. XML MODE
+
             # Pattern to match function name and parameters in XML format
             # Handles both <tool_call><function=name>...</function></tool_call>
             # and malformed <function=name>...</function></tool_call>
@@ -62,8 +65,26 @@ class Qwen3MoeToolParser(BaseToolParser):
                     arguments=arguments,
                 )
                 tool_calls.append(tool_call)
+        
+            # 2. JSON MODE (encountered with Qwen3-30B-A3B-MLX-4bit)
+
+            pattern = r"<tool_call>(.*?)(?:</tool_call>)"
+            matches = re.finditer(pattern, text, re.DOTALL)
+            for match in matches:
+                json_content = match.group(1).strip()
+                try:
+                    json_obj = json.loads(json_content)
+                    if type(json_obj) is dict and "name" in json_obj:
+                        tool_calls.append(ToolCall(
+                            id=f"call_{uuid.uuid4().hex[:8]}",
+                            name=json_obj["name"],
+                            arguments=json_obj.get("arguments", {}),
+                        ))
+                except json.decoder.JSONDecodeError as e:
+                    logger.warning(f"Failed to decode tool call: {json_content}")
 
             return tool_calls if tool_calls else None
+
 
         except Exception as e:
             logger.error(f"Error parsing Qwen3 MoE tool calls: {e}")
