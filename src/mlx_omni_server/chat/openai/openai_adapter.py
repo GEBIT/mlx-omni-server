@@ -12,6 +12,7 @@ from mlx_omni_server.chat.openai.schema import (
     ChatCompletionUsage,
     ChatMessage,
     Role,
+    ToolCall
 )
 from mlx_omni_server.utils.logger import logger
 
@@ -199,6 +200,8 @@ class OpenAIAdapter:
                     role=Role.ASSISTANT,
                     content=chunk.content.text_delta or "",
                     reasoning=chunk.content.reasoning_delta or "",
+                    tool_calls=[ToolCall.from_llama_output(tc.name, tc.arguments, tc.id) for tc in chunk.content.tool_calls] if chunk.content.tool_calls is not None else None,
+                    tool_call_id=chunk.content.tool_calls[0].id if chunk.content.tool_calls is not None else None
                 )
 
                 yield ChatCompletionChunk(

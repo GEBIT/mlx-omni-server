@@ -9,6 +9,7 @@ from .hugging_face import HuggingFaceToolParser
 from .llama3 import Llama3ToolParser
 from .mistral import MistralToolsParser
 from .qwen3_moe_tools_parser import Qwen3MoeToolParser
+from .harmony import HarmonyToolParser
 from .thinking_decoder import (
     ThinkingDecoder,
     DefaultThinkingDecoder,
@@ -29,6 +30,8 @@ def load_tools_parser(model_type: str) -> BaseToolParser:
         return HuggingFaceToolParser()
     if model_type == "qwen3_moe":
         return Qwen3MoeToolParser()
+    if model_type == "gpt_oss":
+        return HarmonyToolParser()
     else:
         return HuggingFaceToolParser()
 
@@ -211,8 +214,10 @@ class ChatTemplate(ABC):
                 content = result.get("content")
                 thinking = result.get("thinking")
 
+        print(f"CHECK TOOLS {self.has_tools} {self.tools_parser}")
         if self.has_tools and self.tools_parser is not None:
-            tool_calls = self.tools_parser.parse_tools(content)
+            tool_calls = self.tools_parser.parse_tools(text)
+            print(f"Input: {text}\nOutput: {tool_calls}")
 
             # If tool calls were found, clear content to avoid duplication
             if tool_calls:

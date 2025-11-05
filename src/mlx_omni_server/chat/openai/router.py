@@ -1,6 +1,6 @@
 import json
 from time import time
-from typing import Generator, Optional
+from typing import AsyncGenerator, Optional
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -36,7 +36,7 @@ async def create_chat_completion(request: ChatCompletionRequest):
         logger.debug(f"Completed completion request after {time() - start_time:.3f}s")
         return JSONResponse(content=completion.model_dump(exclude_none=True))
 
-    async def event_generator() -> Generator[str, None, None]:
+    async def event_generator() -> AsyncGenerator[str, None]:
         for chunk in text_model.generate_stream(request):
             yield f"data: {json.dumps(chunk.model_dump(exclude_none=True))}\n\n"
 
