@@ -19,6 +19,7 @@ from ....utils.logger import logger
 
 # Constants
 THINK_TAG = "<think>"
+THINK_END_TAG = "<think>"
 
 
 def load_tools_parser(model_type: str) -> BaseToolParser:
@@ -177,6 +178,9 @@ class ChatTemplate(ABC):
                 # Without json_schema: ensure prompt ends with <think>
                 if not stripped_prompt.endswith(THINK_TAG):
                     prompt = prompt + THINK_TAG
+
+        if not enable_thinking_parse and self.model_type == "deepseek_v3" and THINK_END_TAG not in prompt:
+            prompt += THINK_TAG + "\n\n" + THINK_END_TAG
 
         if enable_thinking_parse is not False:
             self.reason_decoder = load_thinking_decoder(self.model_type)
