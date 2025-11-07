@@ -159,7 +159,7 @@ class ChatTemplate(ABC):
         stripped_prompt = prompt.rstrip()  # Single rstrip call for efficiency
 
         # Auto-detect thinking if not explicitly set
-        if self.model_type == "gpt_oss" or enable_thinking_parse is None and self._detect_thinking_from_prompt(
+        if enable_thinking_parse is None and self._detect_thinking_from_prompt(
             prompt
         ):
             self.enable_thinking_parse = True
@@ -168,22 +168,18 @@ class ChatTemplate(ABC):
 
         if enable_thinking_parse is True:
             # No prompt modification needed for gpt_oss
-            if self.model_type != "gpt_oss":
-                if skip_thinking_prefill:
-                    # With json_schema: ensure prompt doesn't end with <think>
-                    if stripped_prompt.endswith(THINK_TAG):
-                        prompt = stripped_prompt[: -len(THINK_TAG)]
-                    # Let OutlinesLogitsProcessor handle thinking pattern
-                else:
-                    # Without json_schema: ensure prompt ends with <think>
-                    if not stripped_prompt.endswith(THINK_TAG):
-                        prompt = prompt + THINK_TAG
+            if skip_thinking_prefill:
+                # With json_schema: ensure prompt doesn't end with <think>
+                if stripped_prompt.endswith(THINK_TAG):
+                    prompt = stripped_prompt[: -len(THINK_TAG)]
+                # Let OutlinesLogitsProcessor handle thinking pattern
+            else:
+                # Without json_schema: ensure prompt ends with <think>
+                if not stripped_prompt.endswith(THINK_TAG):
+                    prompt = prompt + THINK_TAG
 
+        if enable_thinking_parse is not False:
             self.reason_decoder = load_thinking_decoder(self.model_type)
-
-        elif enable_thinking_parse is False:
-            # No modification to prompt
-            self.reason_decoder = None
 
         return prompt
 
