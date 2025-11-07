@@ -180,7 +180,7 @@ class ChatTemplate(ABC):
                     prompt = prompt + THINK_TAG
 
         if not enable_thinking_parse and self.model_type == "deepseek_v3" and THINK_END_TAG not in prompt:
-            prompt += THINK_TAG + "\n\n" + THINK_END_TAG
+            prompt += THINK_TAG + "\nLet's answer right away.\n" + THINK_END_TAG + "\n"
 
         if enable_thinking_parse is not False:
             self.reason_decoder = load_thinking_decoder(self.model_type)
