@@ -19,7 +19,7 @@ from ....utils.logger import logger
 
 # Constants
 THINK_TAG = "<think>"
-THINK_END_TAG = "<think>"
+THINK_END_TAG = "</think>"
 
 
 def load_tools_parser(model_type: str) -> BaseToolParser:
