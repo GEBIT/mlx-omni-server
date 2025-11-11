@@ -35,6 +35,7 @@ dependencies = [
     "mflux>=0.11.0,<0.12",
     # embeddings
     "mlx-embeddings>=0.0.3",
+    "gunicorn>=23.0.0",
 ]
 
 [project.urls]
