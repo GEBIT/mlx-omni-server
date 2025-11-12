@@ -11,7 +11,7 @@ from .base_tools import BaseToolParser
 REGEX_PREFIX = r"(?:[\S\s]*)" # captures nothing
 REGEX_CHANNEL = r"<\|channel\|>(?:analysis|commentary)" # captures nothing
 REGEX_RECIPIENT = r"(?: to=functions\.([^<\s]+))" # captures function name
-REGEX_CONSTRAINT = r"(?: (?:<\|constrain\|>)?([a-zA-Z0-9_-]+))?" # captures constrain ("json")
+REGEX_CONSTRAINT = r"(?:\s*(?:<\|constrain\|>)?([a-zA-Z0-9_-]+))?" # captures constrain ("json")
 REGEX_MESSAGE = r"(?:<\|message\|>)?([\S\s]*)" # captures body
 REGEX_TOOL_CALL_1 = re.compile(REGEX_PREFIX + REGEX_RECIPIENT + REGEX_CHANNEL + REGEX_CONSTRAINT + REGEX_MESSAGE)
 REGEX_TOOL_CALL_2 = re.compile(REGEX_PREFIX + REGEX_CHANNEL + REGEX_RECIPIENT + REGEX_CONSTRAINT + REGEX_MESSAGE)
@@ -40,11 +40,11 @@ class HarmonyToolParser(BaseToolParser):
             if match is None:
                 return None
             else:
-                function_name = match.group(1).strip()
-                constrain = match.group(2).strip()
-                if constrain not in [None, "json"]:
-                    logger.warning(f"Unknown constrain: {constrain}")
-                body = match.group(3).strip()
+                groups = match.groups()
+                function_name = groups[0].strip()
+                if len(groups) == 3 and groups[1].strip() not in [None, "json"]:
+                    logger.warning(f"Unknown constrain: {groups[1]}")
+                body = groups[-1].strip()
                 return self._parse_call(function_name, body)
 
         except Exception as e:
