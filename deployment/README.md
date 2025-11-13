@@ -1,5 +1,7 @@
 # How to deploy mlx-omni-server as a service
 
+First, make sure that `mlx-omni-server` is installed properly according to the parent README! Make sure you ran `uv sync` on the most recent commit.
+
 1. Adjust paths in start_server.sh if necessary and make sure it is executable (`chmod +x`). Test it by executing it.
 2. `cp de.gebit.mlx_omni_server.plist ~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist`
 3. Adjust paths in `~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist` to fit your user and the location of this repo.
