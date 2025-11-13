@@ -1,9 +1,10 @@
 # How to deploy mlx-omni-server as a service
 
-1. Adjust paths in start_server.sh if necessary and make sure it is executable (`chmod +x`).
-2. Copy `de.gebit.mlx_omni_server.plist` to `~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist`.
-3. Run `launchctl load ~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist` to load (and launch) to service.
-4. Check that the service is running: `launchctl list | grep mlx_omni_server`
+1. Adjust paths in start_server.sh if necessary and make sure it is executable (`chmod +x`). Test it by executing it.
+2. `cp de.gebit.mlx_omni_server.plist ~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist`
+3. Adjust paths in `~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist` to fit your user and the location of this repo.
+4. Run `launchctl load ~/Library/LaunchAgents/de.gebit.mlx_omni_server.plist` to load (and launch) to service.
+5. Check that the service is running: `launchctl list | grep mlx_omni_server`
 
 Stop the service:
 
