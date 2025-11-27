@@ -16,6 +16,7 @@ from mlx_omni_server.chat.openai.schema import (
 )
 from mlx_omni_server.utils.logger import logger
 
+IMMEDIATELY_SEND_EMPTY_CHUNK = True
 
 class OpenAIAdapter:
     """MLX Chat Model wrapper with internal parameter management"""
@@ -105,7 +106,7 @@ class OpenAIAdapter:
             "top_logprobs": request.top_logprobs if request.logprobs else None,
             "template_kwargs": template_kwargs,
             "enable_prompt_cache": True,
-            "repetition_penalty": request.presence_penalty,
+            "repetition_penalty": 0, # GEBIT: this is broken request.presence_penalty,
             "json_schema": json_schema,
         }
 
@@ -188,6 +189,24 @@ class OpenAIAdapter:
         """Stream generate OpenAI-compatible chunks."""
         try:
             chat_id = f"chatcmpl-{uuid.uuid4().hex[:10]}"
+
+            if IMMEDIATELY_SEND_EMPTY_CHUNK:
+                logger.info("Yielding empty chunk")
+                yield ChatCompletionChunk(
+                    id=chat_id,
+                    created=int(time.time()),
+                    model=request.model,
+                    choices=[
+                        ChatCompletionChunkChoice(
+                            index=0,
+                            delta=ChatMessage(
+                                role=Role.ASSISTANT,
+                                content="",
+                                reasoning=""
+                            )
+                        )
+                    ]
+                )
 
             # Prepare parameters
             params = self._prepare_generation_params(request)
