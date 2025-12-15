@@ -16,7 +16,7 @@ from mlx_omni_server.chat.openai.schema import (
 )
 from mlx_omni_server.utils.logger import logger
 
-IMMEDIATELY_SEND_EMPTY_CHUNK = True
+IMMEDIATELY_SEND_EMPTY_CHUNK = False
 
 class OpenAIAdapter:
     """MLX Chat Model wrapper with internal parameter management"""
