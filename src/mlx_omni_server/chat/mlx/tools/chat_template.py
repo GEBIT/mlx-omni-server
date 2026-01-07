@@ -89,6 +89,9 @@ class ChatTemplate(ABC):
                     for item in msg_dict["content"]
                     if item.get("type") == "text"
                 )
+            # Fix for GPT-OSS 120b: 
+            if "content" in msg_dict and msg_dict["content"] is None:
+                del msg_dict["content"]
             conversation.append(msg_dict)
 
         if kwargs:
