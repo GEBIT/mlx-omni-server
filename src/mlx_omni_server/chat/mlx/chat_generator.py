@@ -186,7 +186,8 @@ class ChatGenerator:
 
         # Map enable_thinking to enable_thinking_parse for new parameter name
         if "enable_thinking" in template_kwargs:
-            template_kwargs["enable_thinking_parse"] = template_kwargs.pop(
+            # FK: Replaced pop with get because pop obviously breaks enable_thinking
+            template_kwargs["enable_thinking_parse"] = template_kwargs.get(
                 "enable_thinking"
             )
 
@@ -448,6 +449,8 @@ class ChatGenerator:
             # Stream generation
             generated_tokens = []
 
+            raw_text = ""
+
             for response in stream_generate(
                 model=self.model.model,
                 tokenizer=self.tokenizer,
@@ -455,9 +458,6 @@ class ChatGenerator:
                 draft_model=self.model.draft_model,
                 **mlx_kwargs,
             ):
-                if response.finish_reason is not None:
-                    break
-
                 generated_tokens.append(response.token)
 
                 # Record first token time if this is the first token
@@ -471,6 +471,7 @@ class ChatGenerator:
                         response, top_logprobs
                     )
 
+                raw_text += response.text
                 parse_result = self.chat_template.stream_parse_chat_result(
                     response.text
                 )
@@ -493,6 +494,15 @@ class ChatGenerator:
                     )
                 # For debugging: print(parse_result.content.upper() + parse_result.thinking.lower(), end="", flush=True)
 
+                
+                finish_reason = response.finish_reason
+                if finish_reason is not None:
+                    logger.info(f"Finish reason: {finish_reason}")
+                    chat_result = self.chat_template.parse_chat_response(raw_text)
+                    if chat_result.tool_calls is not None:
+                        content.tool_calls = chat_result.tool_calls
+                        finish_reason = "tool"
+
                 stats = GenerationStats(
                     prompt_tokens=response.prompt_tokens,
                     completion_tokens=response.generation_tokens,
@@ -505,11 +515,14 @@ class ChatGenerator:
 
                 yield GenerationResult(
                     content=content,
-                    finish_reason=response.finish_reason,
+                    finish_reason=finish_reason,
                     stats=stats,
                     logprobs=logprobs,
-                    from_draft=response.from_draft,
+                    from_draft=response.from_draft
                 )
+
+                if finish_reason is not None:
+                    break
 
             # Extend cache with generated tokens if caching is enabled
             if enable_prompt_cache and generated_tokens:

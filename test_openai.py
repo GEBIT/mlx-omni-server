@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 from openai import OpenAI
 import sys
 
@@ -34,6 +34,8 @@ def main():
         choices=MODEL_MAPPING.keys(),
         help=f"The model alias to use. Choices: {model_choices}"
     )
+    parser.add_argument("--message", type=str, default="Hello!", help="The message to send to the LLM.")
+    parser.add_argument('--thinking', action=BooleanOptionalAction, default=False)
     
     args = parser.parse_args()
     
@@ -53,8 +55,9 @@ def main():
     try:
         completion = client.chat.completions.create(
             model=model_id,
-            messages=[{"role": "user", "content": "Hello!"}],
+            messages=[{"role": "user", "content": args.message}],
             stream=True,
+            extra_body={"enable_thinking": args.thinking},
         )
 
         # Process the stream

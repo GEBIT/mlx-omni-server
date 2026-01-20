@@ -48,6 +48,10 @@ def load_mlx_model(
         config = load_config(model_path)
         chat_template = ChatTemplate(config["model_type"], tokenizer)
 
+        # GPT-OSS: Add <|call|> token as EOS, so the model will stop generating after a tool call
+        if config["model_type"] == "gpt_oss":
+            tokenizer.add_eos_token("<|call|>")
+
         # Load draft model if specified
         draft_model = None
         draft_tokenizer = None

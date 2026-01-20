@@ -72,6 +72,7 @@ class StreamContent(BaseContent):
     text_delta: Optional[str] = None  # Normal text increment
     reasoning_delta: Optional[str] = None  # Thinking process increment
     token: int = 0  # Current generated token
+    tool_calls: Optional[List[ToolCall]] = None  # Tool calls
 
     # Stream-specific fields
     chunk_index: int = 0  # Incremental sequence index

@@ -9,6 +9,7 @@ from .hugging_face import HuggingFaceToolParser
 from .llama3 import Llama3ToolParser
 from .mistral import MistralToolsParser
 from .qwen3_moe_tools_parser import Qwen3MoeToolParser
+from .harmony import HarmonyToolParser
 from .thinking_decoder import (
     ThinkingDecoder,
     DefaultThinkingDecoder,
@@ -18,6 +19,7 @@ from ....utils.logger import logger
 
 # Constants
 THINK_TAG = "<think>"
+THINK_END_TAG = "</think>"
 
 
 def load_tools_parser(model_type: str) -> BaseToolParser:
@@ -29,6 +31,8 @@ def load_tools_parser(model_type: str) -> BaseToolParser:
         return HuggingFaceToolParser()
     if model_type == "qwen3_moe":
         return Qwen3MoeToolParser()
+    if model_type == "gpt_oss":
+        return HarmonyToolParser()
     else:
         return HuggingFaceToolParser()
 
@@ -85,6 +89,9 @@ class ChatTemplate(ABC):
                     for item in msg_dict["content"]
                     if item.get("type") == "text"
                 )
+            # Fix for GPT-OSS 120b: 
+            if "content" in msg_dict and msg_dict["content"] is None:
+                del msg_dict["content"]
             conversation.append(msg_dict)
 
         if kwargs:
@@ -156,18 +163,16 @@ class ChatTemplate(ABC):
         stripped_prompt = prompt.rstrip()  # Single rstrip call for efficiency
 
         # Auto-detect thinking if not explicitly set
-        if enable_thinking_parse is None:
-            if self.model_type == "gpt_oss" or self._detect_thinking_from_prompt(
-                prompt
-            ):
-                self.enable_thinking_parse = True
-                enable_thinking_parse = True
-            # If no <think> detected, remain None (no modification)
+        if enable_thinking_parse is None and self._detect_thinking_from_prompt(
+            prompt
+        ):
+            self.enable_thinking_parse = True
+            enable_thinking_parse = True
+        # If no <think> detected, remain None (no modification)
 
         if enable_thinking_parse is True:
-            if self.model_type == "gpt_oss":
-                pass  # No prompt modification needed for gpt_oss
-            elif skip_thinking_prefill:
+            # No prompt modification needed for gpt_oss
+            if skip_thinking_prefill:
                 # With json_schema: ensure prompt doesn't end with <think>
                 if stripped_prompt.endswith(THINK_TAG):
                     prompt = stripped_prompt[: -len(THINK_TAG)]
@@ -177,12 +182,11 @@ class ChatTemplate(ABC):
                 if not stripped_prompt.endswith(THINK_TAG):
                     prompt = prompt + THINK_TAG
 
-        elif enable_thinking_parse is False:
-            # No modification to prompt
-            self.reason_decoder = None
+        if not enable_thinking_parse and self.model_type == "deepseek_v3" and THINK_END_TAG not in prompt:
+            prompt += THINK_TAG + "\nLet's answer right away.\n" + THINK_END_TAG + "\n"
 
-        # We basically always want a reason decoder as most reasoning models reason by default
-        self.reason_decoder = load_thinking_decoder(self.model_type)
+        if enable_thinking_parse is not False:
+            self.reason_decoder = load_thinking_decoder(self.model_type)
 
         return prompt
 
@@ -213,8 +217,10 @@ class ChatTemplate(ABC):
                 content = result.get("content")
                 thinking = result.get("thinking")
 
+        logger.debug(f"Checking for tools {self.has_tools} {self.tools_parser}")
         if self.has_tools and self.tools_parser is not None:
-            tool_calls = self.tools_parser.parse_tools(content)
+            tool_calls = self.tools_parser.parse_tools(text)
+            logger.debug(f"Input: {text}\nOutput: {tool_calls}")
 
             # If tool calls were found, clear content to avoid duplication
             if tool_calls:

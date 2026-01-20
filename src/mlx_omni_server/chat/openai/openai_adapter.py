@@ -12,9 +12,11 @@ from mlx_omni_server.chat.openai.schema import (
     ChatCompletionUsage,
     ChatMessage,
     Role,
+    ToolCall
 )
 from mlx_omni_server.utils.logger import logger
 
+IMMEDIATELY_SEND_EMPTY_CHUNK = False
 
 class OpenAIAdapter:
     """MLX Chat Model wrapper with internal parameter management"""
@@ -104,7 +106,7 @@ class OpenAIAdapter:
             "top_logprobs": request.top_logprobs if request.logprobs else None,
             "template_kwargs": template_kwargs,
             "enable_prompt_cache": True,
-            "repetition_penalty": request.presence_penalty,
+            "repetition_penalty": 0, # GEBIT: this is broken request.presence_penalty,
             "json_schema": json_schema,
         }
 
@@ -188,6 +190,24 @@ class OpenAIAdapter:
         try:
             chat_id = f"chatcmpl-{uuid.uuid4().hex[:10]}"
 
+            if IMMEDIATELY_SEND_EMPTY_CHUNK:
+                logger.info("Yielding empty chunk")
+                yield ChatCompletionChunk(
+                    id=chat_id,
+                    created=int(time.time()),
+                    model=request.model,
+                    choices=[
+                        ChatCompletionChunkChoice(
+                            index=0,
+                            delta=ChatMessage(
+                                role=Role.ASSISTANT,
+                                content="",
+                                reasoning=""
+                            )
+                        )
+                    ]
+                )
+
             # Prepare parameters
             params = self._prepare_generation_params(request)
 
@@ -199,6 +219,8 @@ class OpenAIAdapter:
                     role=Role.ASSISTANT,
                     content=chunk.content.text_delta or "",
                     reasoning=chunk.content.reasoning_delta or "",
+                    tool_calls=[ToolCall.from_llama_output(tc.name, tc.arguments, tc.id) for tc in chunk.content.tool_calls] if chunk.content.tool_calls is not None else None,
+                    tool_call_id=chunk.content.tool_calls[0].id if chunk.content.tool_calls is not None else None
                 )
 
                 yield ChatCompletionChunk(
