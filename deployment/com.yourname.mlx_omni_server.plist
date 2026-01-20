@@ -3,12 +3,12 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>de.gebit.mlx_omni_server</string> 
+    <string>com.yourname.mlx_omni_server</string> 
 
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/gebit/Public/mlx-omni-server/deployment/start_server.sh</string>
+        <string>/Users/yourname/Public/mlx-omni-server/deployment/start_server.sh</string>
     </array>
 
     <key>KeepAlive</key>
@@ -23,7 +23,7 @@
     <string>/tmp/mlx_server_error.log</string>
 
     <key>WorkingDirectory</key>
-    <string>/Users/gebit/Public/mlx-omni-server</string>
+    <string>/Users/yourname/Public/mlx-omni-server</string>
 
     <!-- It is unclear when/whether this is needed -->
     <!--<key>UserName</key>
