@@ -217,10 +217,10 @@ class ChatTemplate(ABC):
                 content = result.get("content")
                 thinking = result.get("thinking")
 
-        print(f"CHECK TOOLS {self.has_tools} {self.tools_parser}")
+        logger.debug(f"Checking for tools {self.has_tools} {self.tools_parser}")
         if self.has_tools and self.tools_parser is not None:
             tool_calls = self.tools_parser.parse_tools(text)
-            print(f"Input: {text}\nOutput: {tool_calls}")
+            logger.debug(f"Input: {text}\nOutput: {tool_calls}")
 
             # If tool calls were found, clear content to avoid duplication
             if tool_calls:

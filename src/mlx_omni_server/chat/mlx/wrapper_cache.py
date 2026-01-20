@@ -311,7 +311,9 @@ class MLXWrapperCache:
 
 
 # Global cache instance - shared across all API endpoints
-# Default to 3 models with 5-minute TTL as suggested by user requirements
+
+# Suggestion 1: Default to 3 models with 5-minute TTL as suggested by user requirements
 # wrapper_cache = MLXWrapperCache(max_size=3, ttl_seconds=300)
-# GEBIT:
+
+# Suggestion 2: No TTL, unlimited size (for serving a fixed model pool, keeping all models alive)
 wrapper_cache = MLXWrapperCache(max_size=4, ttl_seconds=-1)

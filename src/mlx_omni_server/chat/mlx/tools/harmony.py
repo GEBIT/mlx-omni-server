@@ -57,7 +57,7 @@ class HarmonyToolParser(BaseToolParser):
             if len(args.strip()) != 0:
                 arguments = json.loads(args)
         except json.decoder.JSONDecodeError as e:
-            print(f"Failed to parse JSON body: '{args}':", e)
+            logger.error(f"Failed to parse JSON body: '{args}':", e)
         
         return [ToolCall(
             id=f"call_{uuid.uuid4().hex[:8]}",

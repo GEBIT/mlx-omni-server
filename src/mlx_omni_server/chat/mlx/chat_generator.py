@@ -497,7 +497,7 @@ class ChatGenerator:
                 
                 finish_reason = response.finish_reason
                 if finish_reason is not None:
-                    print(f"FINISH REASON: {finish_reason}")
+                    logger.info(f"Finish reason: {finish_reason}")
                     chat_result = self.chat_template.parse_chat_response(raw_text)
                     if chat_result.tool_calls is not None:
                         content.tool_calls = chat_result.tool_calls
