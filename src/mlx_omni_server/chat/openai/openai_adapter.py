@@ -276,7 +276,7 @@ class OpenAIAdapter:
                         prompt_tokens_details=prompt_tokens_details,
                     ),
                 )
-
+                
         except Exception as e:
             logger.error(f"Error during stream generation: {str(e)}", exc_info=True)
             raise

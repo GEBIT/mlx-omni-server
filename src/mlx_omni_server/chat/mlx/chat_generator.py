@@ -20,7 +20,7 @@ from .model_types import MLXModel
 
 # Default generation parameters
 DEFAULT_MAX_TOKENS = 4096
-
+MAX_CONTEXT_TOKENS = 65536  # This is a general hard limit to avoid system overload; actual limits depend on the model and cache configuration
 
 class ChatGenerator:
     """Core chat generator with unified interface for MLX-based text generation.
@@ -426,6 +426,15 @@ class ChatGenerator:
             # Tokenize prompt
             tokenized_prompt = self.tokenizer.encode(prompt)
 
+            # Check that prompt does not exceed global context limits
+            if len(tokenized_prompt) > MAX_CONTEXT_TOKENS:  # This is a safeguard; actual limits depend on the model and cache configuration
+                logger.error(
+                    f"Tokenized prompt length ({len(tokenized_prompt)}) exceeds global safe limits. Rejecting request."
+                )
+                raise ValueError(
+                    f"Prompt is too long after tokenization. Length: {len(tokenized_prompt)} tokens. Please reduce the prompt length to at most {MAX_CONTEXT_TOKENS} tokens."
+                )
+
             # Process cache if enabled
             processed_prompt = tokenized_prompt
             cached_tokens = 0
@@ -528,6 +537,8 @@ class ChatGenerator:
             if enable_prompt_cache and generated_tokens:
                 self.prompt_cache.extend_completion_cache(generated_tokens)
 
+        except ValueError as ve:
+            raise ve
         except Exception as e:
             logger.error(f"Error during stream generation: {e}")
             raise RuntimeError(f"Stream generation failed: {e}")

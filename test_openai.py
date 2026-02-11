@@ -34,6 +34,7 @@ def main():
         choices=MODEL_MAPPING.keys(),
         help=f"The model alias to use. Choices: {model_choices}"
     )
+    parser.add_argument("--spam", type=int, default=0, help="Instead of a useful message, repeat Lorem Ipsum n times.")
     parser.add_argument("--message", type=str, default="Hello!", help="The message to send to the LLM.")
     parser.add_argument('--thinking', action=BooleanOptionalAction, default=False)
     
@@ -51,11 +52,15 @@ def main():
 
     print(f"Using model: {model_id}\n---")
 
+    message = args.message
+    if args.spam > 0:
+        message = ("Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * args.spam).strip()  # A longer base message
+
     # Run the chat completion
     try:
         completion = client.chat.completions.create(
             model=model_id,
-            messages=[{"role": "user", "content": args.message}],
+            messages=[{"role": "user", "content": message}],
             stream=True,
             extra_body={"enable_thinking": args.thinking},
         )
