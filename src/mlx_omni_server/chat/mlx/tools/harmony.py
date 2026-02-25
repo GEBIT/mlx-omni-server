@@ -42,7 +42,7 @@ class HarmonyToolParser(BaseToolParser):
             else:
                 groups = match.groups()
                 function_name = groups[0].strip()
-                if len(groups) == 3 and groups[1].strip() not in [None, "json"]:
+                if len(groups) == 3 and groups[1] is not None and groups[1].strip() != "json":
                     logger.warning(f"Unknown constrain: {groups[1]}")
                 body = groups[-1].strip()
                 return self._parse_call(function_name, body)
